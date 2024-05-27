@@ -1,7 +1,7 @@
-import { text, serial, pgTable, integer } from "drizzle-orm/pg-core";
+import { text, pgTable, integer } from "drizzle-orm/pg-core";
 
 export const note = pgTable("note", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey().notNull(),
   title: text("title"),
   body: text("body"),
   version: integer("version").notNull(),

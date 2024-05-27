@@ -11,5 +11,5 @@ export default defineConfig({
   },
   // Pick up all our schema files
   schema: ["./packages/backend/*.sql.ts"],
-  out: "./packages/backedn/migrations",
+  out: "./packages/backend/migrations",
 });
