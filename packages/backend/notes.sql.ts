@@ -1,0 +1,20 @@
+import { text, serial, pgTable, integer } from "drizzle-orm/pg-core";
+
+export const note = pgTable("note", {
+  id: serial("id").primaryKey(),
+  title: text("title"),
+  body: text("body"),
+  version: integer("version").notNull(),
+});
+
+export const replicacheServer = pgTable("replicache_server", {
+  id: integer("id").primaryKey().notNull(),
+  version: integer("version"),
+});
+
+export const replicacheClient = pgTable("replicache_client", {
+  id: text("id").primaryKey().notNull(),
+  clientGroupId: text("client_group_id").notNull(),
+  lastMutationID: integer("last_mutation_id").notNull(),
+  version: integer("version").notNull(),
+});

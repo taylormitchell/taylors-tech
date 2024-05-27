@@ -1,0 +1,26 @@
+{
+  "name": "taylors-tech",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "sst dev",
+    "dev:notes": "cd packages/notes && sst dev vite dev",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "db": "sst shell drizzle-kit",
+    "db:studio": "sst shell drizzle-kit studio"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-rds-data": "^3.583.0",
+    "axios": "^1.7.2",
+    "drizzle-kit": "^0.21.4",
+    "drizzle-orm": "^0.30.10",
+    "sst": "ion"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.138"
+  }
+}
