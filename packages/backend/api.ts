@@ -109,10 +109,10 @@ async function applyMutation(t: Transaction, mutation: MutationV1, clientGroupId
     where: eq(replicacheServer.id, serverId),
   });
   const nextVersion = prevVersion + 1;
-  const { lastMutationID } = await t.query.replicacheClient.findFirst({
+  const client = await t.query.replicacheClient.findFirst({
     where: eq(replicacheClient.id, mutation.clientID),
   });
-  const nextMutationID = lastMutationID + 1;
+  const nextMutationID = (client?.lastMutationID || 0) + 1;
   console.log({ nextVersion, nextMutationID });
 
   // skip mutations that have already been processed
@@ -151,7 +151,9 @@ async function applyMutation(t: Transaction, mutation: MutationV1, clientGroupId
     .set({ lastMutationID: nextMutationID, version: nextVersion })
     .where(eq(replicacheClient.id, mutation.clientID))
     .returning();
+  console.log("Upserted lastMutationID", result);
   if (result.length === 0) {
+    console.log("Inserting new client");
     await t.insert(replicacheClient).values({
       id: mutation.clientID,
       clientGroupId,
