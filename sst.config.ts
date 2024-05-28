@@ -17,6 +17,12 @@ export default $config({
       handler: "packages/backend/api.handler",
       timeout: "120 seconds",
     });
+    const ws = new sst.aws.ApiGatewayWebSocket("TaylorsTechWS");
+    ws.route("$default", "packages/backend/ws.handleDefault");
+    ws.route("$connect", "packages/backend/ws.handleConnect");
+    ws.route("$disconnect", "packages/backend/ws.handleDisconnect");
+    ws.route("poke", "packages/backend/ws.handlePoke");
+
     const notes = new sst.aws.StaticSite("TaylorsTechNotes", {
       path: "packages/notes",
       environment: {
