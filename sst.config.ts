@@ -15,6 +15,7 @@ export default $config({
       url: true,
       link: [rds],
       handler: "packages/backend/api.handler",
+      timeout: "120 seconds",
     });
     const notes = new sst.aws.StaticSite("TaylorsTechNotes", {
       path: "packages/notes",
