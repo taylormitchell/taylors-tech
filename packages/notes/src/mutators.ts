@@ -1,20 +1,10 @@
-import { WriteTransaction, generate } from "@rocicorp/rails";
+import { generate } from "@rocicorp/rails";
 import { Note } from "./types";
-import { nanoid } from "nanoid";
 
-const { get: getNote, update: updateNote, list: listNote } = generate<Note>("note");
+const { set: putNote, get: getNote, update: updateNote, list: listNote } = generate<Note>("note");
 
 export const mutators = {
-  putNote: async (tx: WriteTransaction, note: Partial<Note> = {}) => {
-    note = {
-      id: nanoid(),
-      title: null,
-      body: null,
-      ...note,
-      created_at: new Date().toISOString(),
-    };
-    await tx.set(`note/${note.id}`, note);
-  },
+  putNote,
   updateNote,
 };
 

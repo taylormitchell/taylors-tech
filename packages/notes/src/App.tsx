@@ -4,6 +4,7 @@ import { Replicache } from "replicache";
 import { useSubscribe } from "replicache-react";
 import { Note } from "./types";
 import { mutators, selectors } from "./mutators";
+import { nanoid } from "nanoid";
 
 const rep = new Replicache({
   name: "taylormitchell",
@@ -11,11 +12,13 @@ const rep = new Replicache({
   pullURL: "https://gmhjm7swtq2txxf4p6rqtvz23q0yokyq.lambda-url.us-east-1.on.aws/pull",
   pushURL: "https://gmhjm7swtq2txxf4p6rqtvz23q0yokyq.lambda-url.us-east-1.on.aws/push",
   mutators,
+  pullInterval: null,
 });
+(window as any).rep = rep;
 
 function App() {
   const notes = useSubscribe(rep, selectors.listNote, { default: [] as Note[] }).sort((a, b) =>
-    b.created_at.localeCompare(a.created_at)
+    b.createdAt.localeCompare(a.createdAt)
   );
   return (
     <div>
@@ -35,10 +38,24 @@ function App() {
       <div>
         <button
           onClick={() => {
-            rep.mutate.putNote({ body: "" });
+            rep.mutate.putNote({
+              id: nanoid(),
+              title: null,
+              body: "",
+              createdAt: new Date().toISOString(),
+            });
           }}
         >
           new note
+        </button>
+      </div>
+      <div>
+        <button
+          onClick={() => {
+            rep.pull();
+          }}
+        >
+          Pull
         </button>
       </div>
     </div>

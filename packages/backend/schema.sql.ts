@@ -5,6 +5,7 @@ export const note = pgTable("note", {
   title: text("title"),
   body: text("body"),
   version: integer("version").notNull(),
+  createdAt: text("created_at").notNull(),
 });
 
 export const replicacheServer = pgTable("replicache_server", {

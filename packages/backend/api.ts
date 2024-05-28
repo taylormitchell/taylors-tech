@@ -1,8 +1,14 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { db, serverId } from "./db";
 import { note, replicacheClient, replicacheServer } from "./schema.sql";
 import { APIGatewayProxyHandlerV2 } from "aws-lambda";
-import { MutationV1, PushRequestV1 } from "replicache";
+import {
+  MutationV1,
+  PatchOperation,
+  PullRequestV1,
+  PullResponseOKV1,
+  PushRequestV1,
+} from "replicache";
 import { isMutatorName } from "../notes/src/mutators";
 import { Note } from "../notes/src/types";
 
@@ -30,36 +36,60 @@ export const handler: APIGatewayProxyHandlerV2 = async (evt) => {
       };
     }
     case "POST /pull": {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          lastMutationIDChanges: {},
-          cookie: 42,
-          patch: [
-            { op: "clear" },
-            {
-              op: "put",
-              key: "note/qpdgkvpb9ao",
-              value: {
-                id: "qpdgkvpb9ao",
-                title: null,
-                body: "hello world",
-                created_at: "2021-09-29T21:00:00.000Z",
-              },
-            },
-            {
-              op: "put",
-              key: "note/qpdgkvpb9ap",
-              value: {
-                id: "qpdgkvpb9ap",
-                title: null,
-                body: "goodbye world",
-                created_at: "2021-09-29T21:00:00.000Z",
-              },
-            },
-          ],
-        }),
-      };
+      const pull: PullRequestV1 = JSON.parse(evt.body || "{}");
+      console.log("Processing pull", JSON.stringify(pull));
+      const t0 = Date.now();
+
+      try {
+        const body = await db.transaction(
+          async (t) => {
+            return await processPull(t, pull);
+          },
+          { isolationLevel: "repeatable read" }
+        );
+        console.log("Returning patch", JSON.stringify(body));
+        return {
+          statusCode: 200,
+          body: JSON.stringify(body),
+        };
+      } catch (e) {
+        console.error(e);
+        return {
+          statusCode: 500,
+          body: e.message,
+        };
+      }
+
+      // return {
+      //   statusCode: 200,
+      //   body: JSON.stringify({
+      //     lastMutationIDChanges: {},
+      //     cookie: 42,
+      //     patch: [
+      //       { op: "clear" },
+      //       {
+      //         op: "put",
+      //         key: "note/qpdgkvpb9ao",
+      //         value: {
+      //           id: "qpdgkvpb9ao",
+      //           title: null,
+      //           body: "hello world",
+      //           created_at: "2021-09-29T21:00:00.000Z",
+      //         },
+      //       },
+      //       {
+      //         op: "put",
+      //         key: "note/qpdgkvpb9ap",
+      //         value: {
+      //           id: "qpdgkvpb9ap",
+      //           title: null,
+      //           body: "goodbye world",
+      //           created_at: "2021-09-29T21:00:00.000Z",
+      //         },
+      //       },
+      //     ],
+      //   }),
+      // };
     }
     case "POST /push": {
       const push: PushRequestV1 = JSON.parse(evt.body || "{}");
@@ -98,12 +128,61 @@ export const handler: APIGatewayProxyHandlerV2 = async (evt) => {
 
 type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
+async function processPull(t: Transaction, pull: PullRequestV1): Promise<PullResponseOKV1> {
+  const { clientGroupID } = pull;
+  const fromVersion = (pull.cookie as any) ?? 0; // TODO type this
+  const t0 = Date.now();
+  try {
+    const { version: currentVersion } = await t.query.replicacheServer.findFirst({
+      where: eq(replicacheServer.id, serverId),
+    });
+
+    if (fromVersion > currentVersion) {
+      throw new Error(
+        `from ${fromVersion} is from the future - aborting. This can happen in development if the server restarts. In that case, clear appliation data in browser and refresh.`
+      );
+    }
+
+    // get last mutation ids since fromVersion
+    const rows = await t.query.replicacheClient.findMany({
+      where: and(
+        eq(replicacheClient.clientGroupId, clientGroupID),
+        gt(replicacheClient.version, fromVersion)
+      ),
+    });
+    const clientIdToLastMutationId = Object.fromEntries(
+      rows.map((row) => [row.id, row.lastMutationID])
+    );
+
+    const notesChanged = await t.query.note.findMany({
+      where: gt(note.version, fromVersion),
+    });
+    const patch: PatchOperation[] = [];
+    for (const note of notesChanged) {
+      patch.push({
+        op: "put",
+        key: `note/${note.id}`,
+        value: note,
+      });
+      // TODO handle deletes
+    }
+    const body: PullResponseOKV1 = {
+      lastMutationIDChanges: clientIdToLastMutationId ?? {},
+      patch,
+      cookie: currentVersion,
+    };
+    return body;
+  } catch (e) {
+    console.error(e);
+    throw e;
+  }
+}
+
 async function applyMutation(t: Transaction, mutation: MutationV1, clientGroupId: string) {
   const t1 = Date.now();
   if (!isMutatorName(mutation.name)) {
     throw new Error(`Unknown mutation: ${mutation.name}`);
   }
-  // get the previous versions and increment them
 
   const { version: prevVersion } = await t.query.replicacheServer.findFirst({
     where: eq(replicacheServer.id, serverId),
@@ -113,7 +192,7 @@ async function applyMutation(t: Transaction, mutation: MutationV1, clientGroupId
     where: eq(replicacheClient.id, mutation.clientID),
   });
   const nextMutationID = (client?.lastMutationID || 0) + 1;
-  console.log({ nextVersion, nextMutationID });
+  console.log("processing mutation", JSON.stringify({ mutation, nextVersion, nextMutationID }));
 
   // skip mutations that have already been processed
   if (mutation.id < nextMutationID) {
@@ -136,7 +215,10 @@ async function applyMutation(t: Transaction, mutation: MutationV1, clientGroupId
     }
     case "updateNote": {
       const partialNote: Partial<Note> = mutation.args as any; // TODO type this
-      await t.update(note).set(partialNote).where(eq(note.id, partialNote.id));
+      await t
+        .update(note)
+        .set({ ...partialNote, version: nextVersion })
+        .where(eq(note.id, partialNote.id));
       break;
     }
     default: {
@@ -151,7 +233,7 @@ async function applyMutation(t: Transaction, mutation: MutationV1, clientGroupId
     .set({ lastMutationID: nextMutationID, version: nextVersion })
     .where(eq(replicacheClient.id, mutation.clientID))
     .returning();
-  console.log("Upserted lastMutationID", result);
+  console.log("Upserted lastMutationID", JSON.stringify(result));
   if (result.length === 0) {
     console.log("Inserting new client");
     await t.insert(replicacheClient).values({
