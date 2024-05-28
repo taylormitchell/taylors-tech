@@ -21,7 +21,7 @@ export default $config({
     ws.route("$default", "packages/backend/ws.handleDefault");
     ws.route("$connect", "packages/backend/ws.handleConnect");
     ws.route("$disconnect", "packages/backend/ws.handleDisconnect");
-    ws.route("poke", "packages/backend/ws.handlePoke");
+    ws.route("poke", { handler: "packages/backend/ws.handlePoke", link: [ws] });
 
     const notes = new sst.aws.StaticSite("TaylorsTechNotes", {
       path: "packages/notes",
@@ -41,6 +41,7 @@ export default $config({
     return {
       api: api.url,
       notes: notes.url,
+      ws: ws.url,
     };
   },
 });

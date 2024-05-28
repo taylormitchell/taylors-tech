@@ -9,6 +9,11 @@ declare module "sst" {
       secretArn: string
       type: "sst.aws.Postgres"
     }
+    TaylorsTechWS: {
+      managementEndpoint: string
+      type: "sst.aws.ApiGatewayWebSocket"
+      url: string
+    }
   }
 }
 export {}
