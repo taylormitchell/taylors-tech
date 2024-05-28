@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "sst dev",
     "dev:notes": "cd packages/notes && sst dev vite dev",
+    "deploy": "sst deploy",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db": "sst shell drizzle-kit",
     "db:studio": "sst shell drizzle-kit studio"

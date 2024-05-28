@@ -12,7 +12,6 @@ const rep = new Replicache({
   pullURL: "https://gmhjm7swtq2txxf4p6rqtvz23q0yokyq.lambda-url.us-east-1.on.aws/pull",
   pushURL: "https://gmhjm7swtq2txxf4p6rqtvz23q0yokyq.lambda-url.us-east-1.on.aws/push",
   mutators,
-  pullInterval: null,
 });
 (window as any).rep = rep;
 
