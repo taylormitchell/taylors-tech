@@ -20,21 +20,21 @@ function App() {
     b.createdAt.localeCompare(a.createdAt)
   );
   return (
-    <div>
-      <h1>My notes</h1>
-      <ul>
-        {notes.map((note) => (
-          <li key={note.id}>
-            <input
-              value={note.body || ""}
-              onChange={(e) => {
-                rep.mutate.updateNote({ id: note.id, body: e.target.value });
-              }}
-            />
-          </li>
-        ))}
-      </ul>
-      <div>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        padding: "1rem",
+        height: "100%",
+        width: "100%",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
         <button
           onClick={() => {
             rep.mutate.putNote({
@@ -47,8 +47,6 @@ function App() {
         >
           new note
         </button>
-      </div>
-      <div>
         <button
           onClick={() => {
             rep.pull();
@@ -56,6 +54,21 @@ function App() {
         >
           Pull
         </button>
+      </div>
+      <div>
+        {notes.map((note) => (
+          <div key={note.id}>
+            <input
+              style={{
+                width: "100%",
+              }}
+              value={note.body || ""}
+              onChange={(e) => {
+                rep.mutate.updateNote({ id: note.id, body: e.target.value });
+              }}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
