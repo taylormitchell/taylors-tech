@@ -11,6 +11,10 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-apigatewaymanagementapi": "^3.583.0",
-    "replicache": "^14.2.2"
+    "replicache": "^14.2.2",
+    "ws": "^8.17.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.10"
   }
 }

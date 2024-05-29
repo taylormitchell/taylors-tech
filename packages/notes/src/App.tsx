@@ -5,6 +5,7 @@ import { useSubscribe } from "replicache-react";
 import { Note } from "./types";
 import { mutators, selectors } from "./mutators";
 import { nanoid } from "nanoid";
+import { useEffect } from "react";
 
 const rep = new Replicache({
   name: "taylormitchell",
@@ -21,6 +22,26 @@ function App() {
   const notes = useSubscribe(rep, selectors.listNote, { default: [] as Note[] }).sort((a, b) =>
     b.createdAt.localeCompare(a.createdAt)
   );
+  // listen for websocket poke and pull
+  useEffect(() => {
+    console.log("Listening for pokes...");
+    const ws = new WebSocket(env.wsURL);
+    ws.onmessage = (event) => {
+      try {
+        console.log("Received message from server:", event.data);
+        if (JSON.parse(event.data).message === "poke") {
+          console.log("Received poke from server. Pulling...");
+          rep.pull();
+        }
+      } catch (e) {
+        console.warn("Failed to parse message from server:", e);
+      }
+    };
+    return () => {
+      ws.close();
+    };
+  });
+
   return (
     <div
       style={{

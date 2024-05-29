@@ -1,3 +1,4 @@
+import { Resource } from "sst";
 import { and, eq, gt } from "drizzle-orm";
 import { db, serverId } from "./db";
 import { note, replicacheClient, replicacheServer } from "./schema.sql";
@@ -11,6 +12,7 @@ import {
 } from "replicache";
 import { isMutatorName } from "../notes/src/mutators";
 import { Note } from "../notes/src/types";
+import { WebSocket } from "ws";
 
 export const handler: APIGatewayProxyHandlerV2 = async (evt) => {
   const { method, path } = evt.requestContext.http;
@@ -79,6 +81,8 @@ export const handler: APIGatewayProxyHandlerV2 = async (evt) => {
         };
       }
       console.log("Processed push", Date.now() - t0);
+      console.log("Sending poke");
+      sendPoke();
       return {
         statusCode: 200,
         body: "{}",
@@ -220,4 +224,12 @@ async function applyMutation(mutation: MutationV1, clientGroupId: string) {
     },
     { isolationLevel: "repeatable read" }
   );
+}
+
+function sendPoke() {
+  const ws = new WebSocket(Resource.TaylorsTechWS.url);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ action: "poke" }));
+    ws.close();
+  };
 }
