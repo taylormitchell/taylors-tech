@@ -14,6 +14,10 @@ declare module "sst" {
       type: "sst.aws.ApiGatewayWebSocket"
       url: string
     }
+    TaylorsTechWSConnections: {
+      name: string
+      type: "sst.aws.Dynamo"
+    }
   }
 }
 export {}

@@ -11,11 +11,18 @@ export default $config({
   async run() {
     const vpc = new sst.aws.Vpc("TaylorsTechVpc");
     const rds = new sst.aws.Postgres("TaylorsTechRDS", { vpc });
+
+    const ddb = new sst.aws.Dynamo("TaylorsTechWSConnections", {
+      fields: { id: "string" },
+      primaryIndex: { hashKey: "id" },
+    });
+
     const ws = new sst.aws.ApiGatewayWebSocket("TaylorsTechWS");
     ws.route("$default", "packages/backend/ws.handleDefault");
-    ws.route("$connect", "packages/backend/ws.handleConnect");
-    ws.route("$disconnect", "packages/backend/ws.handleDisconnect");
-    ws.route("poke", { handler: "packages/backend/ws.handlePoke", link: [ws] });
+    ws.route("$connect", { handler: "packages/backend/ws.handleConnect", link: [ddb] });
+    ws.route("$disconnect", { handler: "packages/backend/ws.handleDisconnect", link: [ddb] });
+    ws.route("poke", { handler: "packages/backend/ws.handlePoke", link: [ws, ddb] });
+
     const api = new sst.aws.Function("TaylorsTechAPI", {
       url: true,
       link: [rds, ws],

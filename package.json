@@ -22,6 +22,8 @@
     "sst": "ion"
   },
   "devDependencies": {
-    "@types/aws-lambda": "8.10.138"
+    "@types/aws-lambda": "8.10.138",
+    "@types/ws": "^8.5.10",
+    "ws": "^8.17.0"
   }
 }
