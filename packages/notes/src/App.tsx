@@ -5,7 +5,8 @@ import { useSubscribe } from "replicache-react";
 import { Note } from "./types";
 import { mutators, selectors } from "./mutators";
 import { nanoid } from "nanoid";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useDebouncedCallback } from "use-debounce";
 
 const rep = new Replicache({
   name: "taylormitchell",
@@ -93,19 +94,30 @@ function App() {
       </div>
       <div>
         {notes.map((note) => (
-          <div key={note.id}>
-            <input
-              style={{
-                width: "100%",
-              }}
-              value={note.body || ""}
-              onChange={(e) => {
-                rep.mutate.updateNote({ id: note.id, body: e.target.value });
-              }}
-            />
-          </div>
+          <Editor key={note.id} note={note} />
         ))}
       </div>
+    </div>
+  );
+}
+
+function Editor({ note }: { note: Note }) {
+  const [text, setText] = useState(note.body || "");
+  const updateNote = useDebouncedCallback((body: string) => {
+    rep.mutate.updateNote({ id: note.id, body });
+  }, 1000);
+  return (
+    <div>
+      <input
+        style={{
+          width: "100%",
+        }}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          updateNote(e.target.value);
+        }}
+      />
     </div>
   );
 }

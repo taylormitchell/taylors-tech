@@ -155,16 +155,20 @@ async function applyMutation(mutation: MutationV1, clientGroupId: string) {
       if (!isMutatorName(mutation.name)) {
         throw new Error(`Unknown mutation: ${mutation.name}`);
       }
-
-      const { version: prevVersion } = await t.query.replicacheServer.findFirst({
-        where: eq(replicacheServer.id, serverId),
-      });
+      console.log("Getting current version");
+      const prevVersion =
+        (
+          await t.query.replicacheServer.findFirst({
+            where: eq(replicacheServer.id, serverId),
+          })
+        )?.version ?? 0;
       const nextVersion = prevVersion + 1;
+      console.log("Getting lastMutationID for client");
       const client = await t.query.replicacheClient.findFirst({
         where: eq(replicacheClient.id, mutation.clientID),
       });
       const nextMutationID = (client?.lastMutationID || 0) + 1;
-      console.log("processing mutation", JSON.stringify({ mutation, nextVersion, nextMutationID }));
+      // console.log("processing mutation", JSON.stringify({ mutation, nextVersion, nextMutationID }));
 
       // skip mutations that have already been processed
       if (mutation.id < nextMutationID) {
@@ -182,10 +186,12 @@ async function applyMutation(mutation: MutationV1, clientGroupId: string) {
       switch (mutation.name) {
         case "putNote": {
           const { id, title, body } = mutation.args as any; // TODO type this
+          console.log("Inserting note");
           await t.insert(note).values({ id, title, body, version: nextVersion });
           break;
         }
         case "updateNote": {
+          console.log("Updating note");
           const partialNote: Partial<Note> = mutation.args as any; // TODO type this
           await t
             .update(note)
@@ -200,14 +206,13 @@ async function applyMutation(mutation: MutationV1, clientGroupId: string) {
       }
 
       // Upsert lastMutationID for requesting client.
+      console.log("Upserting lastMutationID");
       const result = await t
         .update(replicacheClient)
         .set({ lastMutationID: nextMutationID, version: nextVersion })
         .where(eq(replicacheClient.id, mutation.clientID))
         .returning();
-      console.log("Upserted lastMutationID", JSON.stringify(result));
       if (result.length === 0) {
-        console.log("Inserting new client");
         await t.insert(replicacheClient).values({
           id: mutation.clientID,
           clientGroupId,
@@ -217,6 +222,7 @@ async function applyMutation(mutation: MutationV1, clientGroupId: string) {
       }
 
       // Update global version.
+      console.log("Updating global version");
       await t
         .update(replicacheServer)
         .set({ version: nextVersion })
