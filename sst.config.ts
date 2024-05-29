@@ -34,7 +34,6 @@ export default $config({
       path: "packages/notes",
       environment: {
         VITE_API_URL: api.url,
-        VITE_TEST: "test",
         VITE_WS_URL: ws.url,
       },
       build: {

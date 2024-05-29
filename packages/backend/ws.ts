@@ -82,7 +82,7 @@ export const handlePoke: APIGatewayProxyWebsocketHandlerV2 = async (event) => {
         client.send(
           new PostToConnectionCommand({
             ConnectionId: connectionId,
-            Data: "Poke.",
+            Data: JSON.stringify({ message: "poke" }),
           })
         )
       )

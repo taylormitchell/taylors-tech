@@ -10,8 +10,10 @@ import { useEffect } from "react";
 const rep = new Replicache({
   name: "taylormitchell",
   licenseKey: env.replicacheLicenseKey,
-  pullURL: "https://gmhjm7swtq2txxf4p6rqtvz23q0yokyq.lambda-url.us-east-1.on.aws/pull",
-  pushURL: "https://gmhjm7swtq2txxf4p6rqtvz23q0yokyq.lambda-url.us-east-1.on.aws/push",
+  // pullURL: "https://gmhjm7swtq2txxf4p6rqtvz23q0yokyq.lambda-url.us-east-1.on.aws/pull",
+  // pushURL: "https://gmhjm7swtq2txxf4p6rqtvz23q0yokyq.lambda-url.us-east-1.on.aws/push",
+  pullURL: env.replicachePullURL,
+  pushURL: env.replicachePushURL,
   pullInterval: null,
   pushDelay: Infinity,
   mutators,
@@ -24,8 +26,10 @@ function App() {
   );
   // listen for websocket poke and pull
   useEffect(() => {
-    console.log("Listening for pokes...");
     const ws = new WebSocket(env.wsURL);
+    ws.onopen = () => {
+      console.log("Listening for pokes...");
+    };
     ws.onmessage = (event) => {
       try {
         console.log("Received message from server:", event.data);
@@ -38,9 +42,11 @@ function App() {
       }
     };
     return () => {
-      ws.close();
+      if (ws.readyState === ws.OPEN) {
+        ws.close();
+      }
     };
-  });
+  }, []);
 
   return (
     <div

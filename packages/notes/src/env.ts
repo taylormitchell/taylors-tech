@@ -1,19 +1,13 @@
-import { z } from "zod";
-
-const processEnv = z
-  .object({
-    VITE_API_URL: z.string(),
-    VITE_REPLICACHE_LICENSE_KEY: z.string(),
-    VITE_WS_URL: z.string(),
-  })
-  .parse(import.meta.env);
-
 export const env: {
   apiURL: string;
   replicacheLicenseKey: string;
+  replicachePullURL: string;
+  replicachePushURL: string;
   wsURL: string;
 } = Object.freeze({
-  apiURL: processEnv.VITE_API_URL,
-  replicacheLicenseKey: processEnv.VITE_REPLICACHE_LICENSE_KEY,
-  wsURL: processEnv.VITE_WS_URL,
+  apiURL: import.meta.env.VITE_API_URL,
+  replicacheLicenseKey: import.meta.env.VITE_REPLICACHE_LICENSE_KEY,
+  replicachePullURL: import.meta.env.VITE_API_URL + "pull",
+  replicachePushURL: import.meta.env.VITE_API_URL + "push",
+  wsURL: import.meta.env.VITE_WS_URL,
 });
