@@ -12,8 +12,8 @@ import { atom, getDefaultStore } from "jotai";
 const rep = new Replicache({
   name: "taylormitchell",
   licenseKey: env.replicacheLicenseKey,
-  // pullURL: env.replicachePullURL,
-  // pushURL: env.replicachePushURL,
+  pullURL: env.replicachePullURL,
+  pushURL: env.replicachePushURL,
   pushDelay: 5_000,
   mutators,
 });
@@ -74,8 +74,8 @@ function App() {
   const noteIds = useSubscribe(
     rep,
     async (tx) => {
-      const arr = (await tx.scan({ prefix: "note/" }).values().toArray()) as Note[];
-      arr.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      let arr = (await tx.scan({ prefix: "note/" }).values().toArray()) as Note[];
+      arr = arr.filter((n) => !n.deletedAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       return arr.map((n) => n.id);
     },
     { default: [] as string[] }
@@ -186,7 +186,7 @@ function Editor({ noteId }: { noteId: string }) {
         // on backspace while empty, delete the note
         onKeyDown={(e) => {
           if (e.key === "Backspace" && text === "") {
-            rep.mutate.deleteNote(noteId);
+            rep.mutate.updateNote({ id: noteId, deletedAt: new Date().toISOString() });
           }
         }}
         onFocus={() => {
@@ -200,7 +200,11 @@ function Editor({ noteId }: { noteId: string }) {
           }
         }}
       />
-      <button onClick={() => rep.mutate.deleteNote(noteId)}>X</button>
+      <button
+        onClick={() => rep.mutate.updateNote({ id: noteId, deletedAt: new Date().toISOString() })}
+      >
+        x
+      </button>
     </div>
   );
 }

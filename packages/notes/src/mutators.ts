@@ -1,18 +1,11 @@
 import { generate } from "@rocicorp/rails";
 import { Note } from "./types";
 
-const {
-  set: putNote,
-  get: getNote,
-  update: updateNote,
-  list: listNote,
-  delete: deleteNote,
-} = generate<Note>("note");
+const { set: putNote, get: getNote, update: updateNote, list: listNote } = generate<Note>("note");
 
 export const mutators = {
   putNote,
   updateNote,
-  deleteNote,
 };
 
 export const selectors = {

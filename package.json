@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "sst dev",
-    "dev:notes": "cd packages/notes && sst dev vite dev",
+    "dev:notes": "cd packages/notes && sst dev npm run dev",
     "deploy": "sst deploy",
     "test": "echo \"Error: no test specified\" && exit 1",
     "db": "sst shell drizzle-kit",
