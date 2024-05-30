@@ -16,8 +16,9 @@ const rep = new Replicache({
   pullURL: env.replicachePullURL,
   pushURL: env.replicachePushURL,
   pullInterval: null,
-  pushDelay: Infinity,
+  pushDelay: 5_000,
   mutators,
+  logLevel: "debug",
 });
 (window as any).rep = rep;
 
@@ -106,6 +107,7 @@ function Editor({ note }: { note: Note }) {
   const updateNote = useDebouncedCallback((body: string) => {
     rep.mutate.updateNote({ id: note.id, body });
   }, 1000);
+
   return (
     <div>
       <input
