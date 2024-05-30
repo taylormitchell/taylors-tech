@@ -5,38 +5,31 @@ import { useSubscribe } from "replicache-react";
 import { Note } from "./types";
 import { mutators, selectors } from "./mutators";
 import { nanoid } from "nanoid";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
+import { atom, getDefaultStore } from "jotai";
 
 const rep = new Replicache({
   name: "taylormitchell",
   licenseKey: env.replicacheLicenseKey,
-  // pullURL: "https://gmhjm7swtq2txxf4p6rqtvz23q0yokyq.lambda-url.us-east-1.on.aws/pull",
-  // pushURL: "https://gmhjm7swtq2txxf4p6rqtvz23q0yokyq.lambda-url.us-east-1.on.aws/push",
-  pullURL: env.replicachePullURL,
-  pushURL: env.replicachePushURL,
-  pullInterval: null,
+  // pullURL: env.replicachePullURL,
+  // pushURL: env.replicachePushURL,
   pushDelay: 5_000,
   mutators,
-  logLevel: "debug",
 });
 (window as any).rep = rep;
 
-function App() {
-  const notes = useSubscribe(rep, selectors.listNote, { default: [] as Note[] }).sort((a, b) =>
-    b.createdAt.localeCompare(a.createdAt)
-  );
-  // listen for websocket poke and pull
+function usePullOnPoke(rep: Replicache) {
   useEffect(() => {
     const ws = new WebSocket(env.wsURL);
     ws.onopen = () => {
-      console.log("Listening for pokes...");
+      console.debug("Listening for pokes...");
     };
     ws.onmessage = (event) => {
       try {
-        console.log("Received message from server:", event.data);
+        console.debug("Received message from server:", event.data);
         if (JSON.parse(event.data).message === "poke") {
-          console.log("Received poke from server. Pulling...");
+          console.debug("Received poke from server. Pulling...");
           rep.pull();
         }
       } catch (e) {
@@ -48,16 +41,55 @@ function App() {
         ws.close();
       }
     };
-  }, []);
+  }, [rep]);
+}
 
+const viewStateAtom = atom<{ id: string }>({ id: "" });
+// const useIsFocused = (id: string) => {
+//   const [isFocused, setIsFocused] = useState(false);
+//   const viewState = useAtomValue(viewStateAtom);
+//   useEffect(() => {
+//     const newIsFocused = viewState.id === id;
+//     if (newIsFocused !== isFocused) {
+//       console.log("Setting focus", id, newIsFocused);
+//       setIsFocused(newIsFocused);
+//     }
+//   }, [viewState, id, isFocused]);
+//   return isFocused;
+// };
+const isFocused = (id: string | undefined) => {
+  return getDefaultStore().get(viewStateAtom).id === id;
+};
+const setFocus = (id: string | null) => {
+  getDefaultStore().set(viewStateAtom, { id: id || "" });
+};
+
+(window as any).getViewState = () => getDefaultStore().get(viewStateAtom);
+
+function App() {
+  usePullOnPoke(rep);
+
+  // Subscribe to the list of note IDs, sorted by creation date. We don't query the full
+  // notes here, because if we did, the whole list would re-render on every note content change.
+  const noteIds = useSubscribe(
+    rep,
+    async (tx) => {
+      const arr = (await tx.scan({ prefix: "note/" }).values().toArray()) as Note[];
+      arr.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      return arr.map((n) => n.id);
+    },
+    { default: [] as string[] }
+  );
+
+  console.debug("Rendering App");
   return (
     <div
       style={{
         display: "flex",
         flexDirection: "column",
-        padding: "1rem",
         height: "100%",
         width: "100%",
+        padding: "1em 1em 10em",
       }}
     >
       <div
@@ -68,12 +100,15 @@ function App() {
       >
         <button
           onClick={() => {
+            const id = nanoid();
             rep.mutate.putNote({
-              id: nanoid(),
+              id,
               title: null,
               body: "",
               createdAt: new Date().toISOString(),
             });
+            console.log("Created note", id);
+            setFocus(id);
           }}
         >
           new note
@@ -94,32 +129,78 @@ function App() {
         </button>
       </div>
       <div>
-        {notes.map((note) => (
-          <Editor key={note.id} note={note} />
+        {noteIds.map((id) => (
+          <Editor key={id} noteId={id} />
         ))}
       </div>
     </div>
   );
 }
 
-function Editor({ note }: { note: Note }) {
-  const [text, setText] = useState(note.body || "");
-  const updateNote = useDebouncedCallback((body: string) => {
-    rep.mutate.updateNote({ id: note.id, body });
+function Editor({ noteId }: { noteId: string }) {
+  const ref = useRef<HTMLInputElement>(null);
+  const note = useSubscribe(rep, (tx) => selectors.getNote(tx, noteId));
+
+  // Set text to the note body when the note changes. We don't update the note
+  // body on every keystroke though, to avoid spamming the server. So the text
+  // state will be out of sync with the note body until the user stops typing,
+  // at which point we update the note body.
+  const [text, setText] = useState(note?.body || "");
+  useEffect(() => {
+    setText(note?.body || "");
+  }, [note]);
+  const debouncedUpdateNote = useDebouncedCallback((body: string) => {
+    rep.mutate.updateNote({ id: noteId, body });
   }, 1000);
 
+  // After the initial render, focus the input if this note is focused
+  useEffect(() => {
+    if (isFocused(note?.id) && ref.current !== document.activeElement) {
+      ref.current?.focus();
+    }
+  }, [note]);
+
+  if (!note) {
+    return null;
+  }
+  console.debug("Rendering Editor", note.id);
   return (
-    <div>
+    <div
+      style={{
+        display: "flex",
+        width: "100%",
+      }}
+    >
       <input
+        ref={ref}
         style={{
-          width: "100%",
+          flexBasis: 0,
+          flexGrow: 1,
+          fontSize: "1.2em",
         }}
         value={text}
         onChange={(e) => {
           setText(e.target.value);
-          updateNote(e.target.value);
+          debouncedUpdateNote(e.target.value);
+        }}
+        // on backspace while empty, delete the note
+        onKeyDown={(e) => {
+          if (e.key === "Backspace" && text === "") {
+            rep.mutate.deleteNote(noteId);
+          }
+        }}
+        onFocus={() => {
+          if (!isFocused(noteId)) {
+            setFocus(noteId);
+          }
+        }}
+        onBlur={() => {
+          if (isFocused(noteId)) {
+            setFocus(null);
+          }
         }}
       />
+      <button onClick={() => rep.mutate.deleteNote(noteId)}>X</button>
     </div>
   );
 }
