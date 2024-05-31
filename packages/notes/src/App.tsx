@@ -8,6 +8,7 @@ import { nanoid } from "nanoid";
 import { useEffect, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { atom, getDefaultStore } from "jotai";
+import { ProsemirrorMarkdownEditor } from "./ProsemirrorMarkdownEditor";
 
 // Set up Replicache
 const rep = new Replicache({
@@ -134,7 +135,7 @@ function Editor({ noteId }: { noteId: string }) {
   if (!note) {
     return null;
   }
-  console.debug("Rendering Editor", note.id);
+  console.debug("Rendering Editor", { noteId: note.id, text });
   return (
     <div
       style={{
@@ -142,7 +143,29 @@ function Editor({ noteId }: { noteId: string }) {
         width: "100%",
       }}
     >
-      <input
+      <ProsemirrorMarkdownEditor
+        style={{
+          flexGrow: 1,
+          fontSize: "1.2em",
+          textAlign: "left",
+        }}
+        value={text}
+        onChange={(value) => {
+          setText(value);
+          debouncedUpdateNote(value);
+        }}
+        onFocus={() => {
+          if (!isFocused(noteId)) {
+            setFocus(noteId);
+          }
+        }}
+        onBlur={() => {
+          if (isFocused(noteId)) {
+            setFocus(null);
+          }
+        }}
+      />
+      {/* <input
         ref={ref}
         style={{
           flexBasis: 0,
@@ -170,7 +193,7 @@ function Editor({ noteId }: { noteId: string }) {
             setFocus(null);
           }
         }}
-      />
+      /> */}
       <button
         onClick={() => rep.mutate.updateNote({ id: noteId, deletedAt: new Date().toISOString() })}
       >
