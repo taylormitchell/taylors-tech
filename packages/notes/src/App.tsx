@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { atom, getDefaultStore } from "jotai";
 
+// Set up Replicache
 const rep = new Replicache({
   name: "taylormitchell",
   licenseKey: env.replicacheLicenseKey,
@@ -17,46 +18,14 @@ const rep = new Replicache({
   pushDelay: 5_000,
   mutators,
 });
-(window as any).rep = rep;
-
-function usePullOnPoke(rep: Replicache) {
-  useEffect(() => {
-    const ws = new WebSocket(env.wsURL);
-    ws.onopen = () => {
-      console.debug("Listening for pokes...");
-    };
-    ws.onmessage = (event) => {
-      try {
-        console.debug("Received message from server:", event.data);
-        if (JSON.parse(event.data).message === "poke") {
-          console.debug("Received poke from server. Pulling...");
-          rep.pull();
-        }
-      } catch (e) {
-        console.warn("Failed to parse message from server:", e);
-      }
-    };
-    return () => {
-      if (ws.readyState === ws.OPEN) {
-        ws.close();
-      }
-    };
-  }, [rep]);
+if (env.replicachePokeURL) {
+  const ws = new WebSocket(env.replicachePokeURL);
+  ws.onmessage = () => rep.pull();
+  window.addEventListener("beforeunload", () => ws.close());
 }
 
+// Set up view state
 const viewStateAtom = atom<{ id: string }>({ id: "" });
-// const useIsFocused = (id: string) => {
-//   const [isFocused, setIsFocused] = useState(false);
-//   const viewState = useAtomValue(viewStateAtom);
-//   useEffect(() => {
-//     const newIsFocused = viewState.id === id;
-//     if (newIsFocused !== isFocused) {
-//       console.log("Setting focus", id, newIsFocused);
-//       setIsFocused(newIsFocused);
-//     }
-//   }, [viewState, id, isFocused]);
-//   return isFocused;
-// };
 const isFocused = (id: string | undefined) => {
   return getDefaultStore().get(viewStateAtom).id === id;
 };
@@ -64,11 +33,12 @@ const setFocus = (id: string | null) => {
   getDefaultStore().set(viewStateAtom, { id: id || "" });
 };
 
-(window as any).getViewState = () => getDefaultStore().get(viewStateAtom);
+// Expose some stuff for debugging
+const w = window as any;
+w.rep = rep;
+w.getViewState = () => getDefaultStore().get(viewStateAtom);
 
 function App() {
-  usePullOnPoke(rep);
-
   // Subscribe to the list of note IDs, sorted by creation date. We don't query the full
   // notes here, because if we did, the whole list would re-render on every note content change.
   const noteIds = useSubscribe(
@@ -106,6 +76,7 @@ function App() {
               title: null,
               body: "",
               createdAt: new Date().toISOString(),
+              deletedAt: null,
             });
             console.log("Created note", id);
             setFocus(id);
