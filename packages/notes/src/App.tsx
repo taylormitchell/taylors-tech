@@ -22,7 +22,6 @@ function App() {
     { default: [] as string[], dependencies: [limit] }
   );
 
-  console.debug("Rendering App");
   return (
     <div
       style={{
@@ -57,6 +56,7 @@ function App() {
         </button>
         <button
           onClick={() => {
+            console.debug("Pulling in response to button click");
             rep.pull();
           }}
         >
@@ -64,6 +64,7 @@ function App() {
         </button>
         <button
           onClick={() => {
+            console.debug("Pushing in response to button click");
             rep.push();
           }}
         >
@@ -81,7 +82,6 @@ function App() {
 }
 
 function Editor({ noteId }: { noteId: string }) {
-  console.debug("Rendering Editor", { noteId });
   const note = useSubscribe(rep, (tx) => selectors.getNote(tx, noteId));
   const debouncedUpdateNote = useDebouncedCallback((body: string) => {
     console.debug("Updating note", { noteId, body });

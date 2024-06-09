@@ -8,8 +8,6 @@ const processEnv = z
   })
   .parse(import.meta.env);
 
-console.log(processEnv);
-
 export const env: {
   replicacheLicenseKey: string;
   replicachePullURL?: string;
@@ -21,3 +19,5 @@ export const env: {
   replicachePushURL: processEnv.VITE_API_URL ? processEnv.VITE_API_URL + "push" : undefined,
   replicachePokeURL: processEnv.VITE_WS_URL,
 });
+
+console.debug("env", env);

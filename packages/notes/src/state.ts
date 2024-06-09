@@ -11,10 +11,15 @@ export const rep = new Replicache({
   pushURL: env.replicachePushURL,
   pushDelay: 5000,
   mutators,
+  logLevel: "debug",
 });
+
 if (env.replicachePokeURL) {
   const ws = new WebSocket(env.replicachePokeURL);
-  ws.onmessage = () => rep.pull();
+  ws.onmessage = () => {
+    console.debug("Pulling in response to poke");
+    rep.pull();
+  };
   window.addEventListener("beforeunload", () => ws.close());
 }
 // Set up view state
@@ -29,3 +34,6 @@ export const setFocus = (id: string | null) => {
 const w = window as any;
 w.rep = rep;
 w.getViewState = () => getDefaultStore().get(viewStateAtom);
+w.getRepState = async () => {
+  return rep.query((tx) => tx.scan().entries().toArray());
+};
