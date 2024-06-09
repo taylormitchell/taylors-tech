@@ -1,8 +1,9 @@
 {
   "name": "taylors-tech",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.0.0",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "sst dev",
     "dev:notes": "cd packages/notes && sst dev npm run dev",
@@ -11,19 +12,13 @@
     "db": "sst shell drizzle-kit",
     "db:studio": "sst shell drizzle-kit studio"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "devDependencies": {
+    "@tsconfig/node20": "^20.1.4",
+    "typescript": "5.3.3"
+  },
   "dependencies": {
-    "@aws-sdk/client-rds-data": "^3.583.0",
-    "axios": "^1.7.2",
     "drizzle-kit": "^0.21.4",
     "drizzle-orm": "^0.30.10",
-    "sst": "ion"
-  },
-  "devDependencies": {
-    "@types/aws-lambda": "8.10.138",
-    "@types/ws": "^8.5.10",
-    "ws": "^8.17.0"
+    "sst": "^3.0.4"
   }
 }

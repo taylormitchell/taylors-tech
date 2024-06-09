@@ -9,20 +9,22 @@ export default $config({
     };
   },
   async run() {
+    // Database
     const vpc = new sst.aws.Vpc("TaylorsTechVpc");
     const rds = new sst.aws.Postgres("TaylorsTechRDS", { vpc });
 
+    // WebSocket
     const ddb = new sst.aws.Dynamo("TaylorsTechWSConnections", {
       fields: { id: "string" },
       primaryIndex: { hashKey: "id" },
     });
-
     const ws = new sst.aws.ApiGatewayWebSocket("TaylorsTechWS");
     ws.route("$default", "packages/backend/ws.handleDefault");
     ws.route("$connect", { handler: "packages/backend/ws.handleConnect", link: [ddb] });
     ws.route("$disconnect", { handler: "packages/backend/ws.handleDisconnect", link: [ddb] });
     ws.route("poke", { handler: "packages/backend/ws.handlePoke", link: [ws, ddb] });
 
+    // API
     const api = new sst.aws.Function("TaylorsTechAPI", {
       url: true,
       link: [rds, ws],
@@ -30,6 +32,7 @@ export default $config({
       timeout: "120 seconds",
     });
 
+    // Notes app
     const notes = new sst.aws.StaticSite("TaylorsTechNotes", {
       path: "packages/notes",
       environment: {

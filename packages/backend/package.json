@@ -14,10 +14,13 @@
     "@aws-sdk/client-dynamodb": "^3.585.0",
     "@aws-sdk/lib-dynamodb": "^3.585.0",
     "replicache": "^14.2.2",
+    "sst": "^3.0.4",
     "ws": "^8.17.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@tsconfig/node20": "^20.1.4",
+    "@types/aws-lambda": "^8.10.138",
     "@types/ws": "^8.5.10"
   }
 }
